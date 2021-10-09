@@ -19,7 +19,7 @@ class EncryptingScreen extends StatefulWidget {
 
 class _EncryptingScreenState extends State<EncryptingScreen> {
 
-   late File theImage;
+   late File theImage = File("/images/wallSteerts.png");
 
    //use the text editing controller to store the user text input to store it in the images
    late TextEditingController HiddenMessageController;
@@ -27,6 +27,8 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
 
    late String HiddenMessage = "";
    late String PrivateKey = "";
+
+   bool IsLoaded = false;
 
    void initState(){
      HiddenMessageController = new TextEditingController();
@@ -89,7 +91,6 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
   }
 
    Widget UpdateImageView(){
-
     print(theImage);
 
     if(theImage == null) {
@@ -97,7 +98,6 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
     }
 
     return Image.file(theImage, width: 200, height: 200);
-
   }
 
   @override
@@ -120,7 +120,7 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
 
               //Add the user input for the encrypted message and password to be stored as bits
 
-              SizedBox(height: 20),
+              SizedBox(height: 10),
               TextFormField(
                   controller: HiddenMessageController,
                   decoration: InputDecoration(
@@ -130,7 +130,7 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
                 ),
               ),
 
-              SizedBox(height: 20),
+              SizedBox(height: 10),
               TextFormField(
                   controller: PrivateKeyController,
                   obscureText: true,
