@@ -97,7 +97,7 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
       return Text("Image not selected");
     }
 
-    return Image.file(theImage, width: 200, height: 200);
+    return Image.file(theImage, width: 125, height: 125);
   }
 
   @override
@@ -108,39 +108,43 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
        ),
       body: Container(
         child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: <Widget>[
-                  UpdateImageView(),
-                  RaisedButton(onPressed: () {
-                  ShowOptionDialog(context);
-              },
-                child: Text("Upload Image"),
-              ),
-
-              //Add the user input for the encrypted message and password to be stored as bits
-
-              SizedBox(height: 10),
-              TextFormField(
-                  controller: HiddenMessageController,
-                  decoration: InputDecoration(
-                  isDense: true,
-                  border: OutlineInputBorder(),
-                  hintText: "Enter the message you want to hide.",
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: <Widget>[
+                    UpdateImageView(),
+                    RaisedButton(onPressed: () {
+                    ShowOptionDialog(context);
+                },
+                  child: Text("Upload Image"),
                 ),
-              ),
 
-              SizedBox(height: 10),
-              TextFormField(
-                  controller: PrivateKeyController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                  isDense: true,
-                  border: OutlineInputBorder(),
-                  hintText: "Enter a password.",
-              ),
-              ),
-            ],
+                //Add the user input for the encrypted message and password to be stored as bits
+
+                SizedBox(height: 5),
+                TextFormField(
+                    controller: HiddenMessageController,
+                    decoration: InputDecoration(
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                    hintText: "Enter the message you want to hide.",
+
+                  ),
+                ),
+
+                SizedBox(height: 5),
+                TextFormField(
+                    controller: PrivateKeyController,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                    hintText: "Enter a password.",
+                ),
+                ),
+              ],
+
+            ),
           ),
         ),
       ),
