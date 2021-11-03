@@ -23,19 +23,24 @@ class EncryptingScreen extends StatefulWidget {
 
 class _EncryptingScreenState extends State<EncryptingScreen> {
 
-   late io.File theImage = io.File('/images/no-image-found.png');
+
+    late File theImage = File("/images/wallSteerts.png");
+
    //use the text editing controller to store the user text input to store it in the images
    late TextEditingController HiddenMessageController;
    late TextEditingController PrivateKeyController;
 
    late String encryptedFileDir = "";
-
+   late String HiddenMessage = "";
+   late String PrivateKey = "";
+   bool IsLoaded = false;
 
    void initState(){
 
      HiddenMessageController = new TextEditingController();
      PrivateKeyController = new TextEditingController();
      print(HiddenMessageController.text);
+
      super.initState();
    }
 
@@ -102,7 +107,6 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
                   ),
 
                   Padding(padding: EdgeInsets.all(10.0)),
-
                   /*GestureDetector(
                     child: Text("Camera"),
                     onTap: () {
@@ -117,7 +121,6 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
   }
 
    Widget UpdateImageView(){
-
     print(theImage);
 
     if(theImage == null) {
@@ -364,4 +367,47 @@ class _LockIttState extends State<MyApp> {
   }
 }*/
 
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: <Widget>[
+                    UpdateImageView(),
+                    RaisedButton(onPressed: () {
+                    ShowOptionDialog(context);
+                },
+                  child: Text("Upload Image"),
+                ),
+
+                //Add the user input for the encrypted message and password to be stored as bits
+
+                SizedBox(height: 5),
+                TextFormField(
+                    controller: HiddenMessageController,
+                    decoration: InputDecoration(
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                    hintText: "Enter the message you want to hide.",
+
+                  ),
+                ),
+
+                SizedBox(height: 5),
+                TextFormField(
+                    controller: PrivateKeyController,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                    hintText: "Enter a password.",
+                ),
+                ),
+              ],
+
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
