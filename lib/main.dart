@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -64,10 +65,12 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
     crypt.setPassword(password);
     final path = await _localPath;
     try {
-      File file = File('$path/encryption.txt');
+      File file = File('$path/encryption.txt.aes');
       print('Hidden msg: $password\n');
       print('Password msg: $hiddenMessage\n');
       encryptedFileDir = crypt.encryptTextToFileSync(hiddenMessage, file.path, utf16: false);
+      var decryptedString = crypt.decryptTextFromFileSync(file.path);
+      print('Contents:' + decryptedString);
       print('Encrypted file: ' + file.path + '\n');
     } catch(e) {
       print(e.toString());
