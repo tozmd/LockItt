@@ -1,5 +1,3 @@
-
-
 import 'dart:io' as io;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -26,6 +24,7 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
 
 
   late io.File theImage = io.File("/images/wall_street.png");
+
 
   //use the text editing controller to store the user text input to store it in the images
   late TextEditingController HiddenMessageController;
@@ -186,3 +185,4 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
     );
   }
 }
+
