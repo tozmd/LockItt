@@ -1,4 +1,4 @@
-import 'dart:io' as io;
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
@@ -22,8 +22,7 @@ class EncryptingScreen extends StatefulWidget {
 
 class _EncryptingScreenState extends State<EncryptingScreen> {
 
-
-    late io.File theImage = io.File("/images/wall_street.png");
+  late File theImage = File("/images/kirby.jpg");
 
    //use the text editing controller to store the user text input to store it in the images
    late TextEditingController HiddenMessageController;
@@ -60,26 +59,30 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
   }
 
   void encryptText(BuildContext context, String? password, String? hiddenMessage) async {
-    var crypt = AesCrypt(password);
+    AesCrypt crypt = AesCrypt();
+    crypt.setOverwriteMode(AesCryptOwMode.on);
+    crypt.setPassword(password);
+    final path = await _localPath;
     try {
-      final localPath = await _localPath;
-      print(crypt.hashCode);
+      File file = File('$path/encryption.txt');
       print('Hidden msg: $password\n');
       print('Password msg: $hiddenMessage\n');
-      //encryptedFileDir = crypt.encryptTextToFileSync(hiddenMessage, '$localPath/test.txt.aes', utf16: false);
-      //print('Encrypted file: $encryptedFileDir\n');
+      encryptedFileDir = crypt.encryptTextToFileSync(hiddenMessage, file.path, utf16: false);
+      print('Encrypted file: ' + file.path + '\n');
     } catch(e) {
       print(e.toString());
     }
-
   }
 
-  Future<String> get _localPath async {
+  //Returns app directory
+ Future<String> get _localPath async {
     final directory = await getApplicationDocumentsDirectory();
-    // For your reference print the AppDoc directory
-    print(directory.path + '/' + 'dir');
-    return directory.path + '/' + 'dir';
+    String path = directory.path;
+    return path;
   }
+
+
+
 
 
   /*void OpenCamera(BuildContext context) async{
@@ -130,57 +133,59 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
 
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("Encrypt'n"),
-       ),
-      body: Container(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: <Widget>[
+    @override
+    Widget build(BuildContext context) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text("Encrypt'n"),
+        ),
+        body: Container(
+          child: Center(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: <Widget>[
                   UpdateImageView(),
                   RaisedButton(onPressed: () {
-                  ShowOptionDialog(context);
-              },
-                child: Text("Upload Image"),
-              ),
+                    ShowOptionDialog(context);
+                  },
+                    child: Text("Upload Image"),
+                  ),
 
-              //Add the user input for the encrypted message and password to be stored as bits
+                  //Add the user input for the encrypted message and password to be stored as bits
 
-              SizedBox(height: 20),
-              TextFormField(
-                  controller: HiddenMessageController,
-                  decoration: InputDecoration(
-                  isDense: true,
-                  border: OutlineInputBorder(),
-                  hintText: "Enter the message you want to hide.",
-                ),
-              ),
+                  SizedBox(height: 20),
+                  TextFormField(
+                    controller: HiddenMessageController,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                      hintText: "Enter the message you want to hide.",
+                    ),
+                  ),
 
-              SizedBox(height: 20),
-              TextFormField(
-                  controller: PrivateKeyController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                  isDense: true,
-                  border: OutlineInputBorder(),
-                  hintText: "Enter a password.",
+                  SizedBox(height: 20),
+                  TextFormField(
+                    controller: PrivateKeyController,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                      hintText: "Enter a password.",
+                    ),
+                  ),
+                  FloatingActionButton(
+                      onPressed: () {
+                        encryptText(context, Text(HiddenMessageController.text).data, Text(PrivateKeyController.text).data);
+                      }
+                  )
+                ],
               ),
-              ),
-              FloatingActionButton(
-                  onPressed: () {
-                    encryptText(context, Text(HiddenMessageController.text).data, Text(PrivateKeyController.text).data);
-                  }
-              )
-            ],
+            ),
           ),
         ),
-      ),
-    );
-  }
+      );
+    }
 }
 
 
