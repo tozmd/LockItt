@@ -1,10 +1,12 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
 import 'package:aes_crypt/aes_crypt.dart';
+import 'package:flutter/services.dart';
+import 'package:image/image.dart' as im;
+import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+
 
 void main() {
   runApp(new MaterialApp(
@@ -24,6 +26,7 @@ class EncryptingScreen extends StatefulWidget {
 class _EncryptingScreenState extends State<EncryptingScreen> {
 
   late File theImage = File("/images/kirby.jpg");
+  late Uint8List decodedImageBytes;
 
   //use the text editing controller to store the user text input to store it in the images
   late TextEditingController HiddenMessageController;
@@ -72,16 +75,68 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
       var decryptedString = crypt.decryptTextFromFileSync(file.path);
       print('Contents:' + decryptedString);
       print('Encrypted file: ' + file.path + '\n');
+
+
+      //For testing purposes
+      ByteData byteData = convertFileToByteData(file);
+      print("Converted file to byte data");
+      print(convertByteDataToString(byteData));
+      print("Converted bytedata to uint8list");
+
+      print("Image bytes: ");
+      print(decodeImageData());
+
     } catch(e) {
       print(e.toString());
     }
   }
+
+  ByteData convertFileToByteData(File fileToRead){
+    final file = fileToRead;
+    Uint8List bytes = file.readAsBytesSync();
+    return ByteData.view(bytes.buffer);
+  }
+
+  Uint8List convertByteDataToString(ByteData byteData){
+      ByteBuffer buffer = byteData.buffer;
+      var list = buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes);
+      return list;
+  }
+
+/*  Color getColorAtPixel(Image image){
+    image
+    return;
+  }*/
+
 
   //Returns app directory
   Future<String> get _localPath async {
     final directory = await getApplicationDocumentsDirectory();
     String path = directory.path;
     return path;
+  }
+
+  Future<List<List<List<int>>>> decodeImageData() async {
+    final Uint8List inputImg = (await rootBundle.load("images/dummy.jpeg")).buffer.asUint8List();
+    final Uint8List test;
+    final decoder = im.JpegDecoder();
+    final decodedImg = decoder.decodeImage(inputImg);
+    final decodedBytes = decodedImg.getBytes(format: im.Format.rgb);
+    decodedImageBytes = decodedBytes;
+
+    List<List<List<int>>> imgArr = [];
+    for(int y = 0; y < decodedImg.height; y++){
+      imgArr.add([]);
+      for(int x = 0; x < decodedImg.width; x++){
+        int r = decodedBytes[y * decodedImg.width * 3 + x * 3];
+        int g = decodedBytes[y * decodedImg.width * 3 + x * 3 + 1];
+        int b = decodedBytes[y * decodedImg.width * 3 + x * 3 + 2];
+        imgArr[y].add([r,g,b]);
+      }
+    }
+    print("rgb list");
+    print(imgArr);
+    return imgArr;
   }
 
 
@@ -131,9 +186,7 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
     if(theImage == null) {
       return Text("Image not selected");
     }
-
     return Image.file(theImage, width: 200, height: 200);
-
   }
 
   @override
@@ -149,10 +202,11 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: <Widget>[
                 UpdateImageView(),
-                RaisedButton(onPressed: () {
+              RaisedButton(onPressed: () {
                   ShowOptionDialog(context);
                 },
                   child: Text("Upload Image"),
+
                 ),
 
                 //Add the user input for the encrypted message and password to be stored as bits
