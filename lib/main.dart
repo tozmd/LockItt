@@ -1,18 +1,28 @@
-
-
-import 'dart:io' as io;
+import 'dart:io';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
 import 'package:aes_crypt/aes_crypt.dart';
+import 'package:flutter/services.dart';
+import 'package:image/image.dart' as im;
+import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import "decrypt.dart";
 
 void main() {
   runApp(new MaterialApp(
+    initialRoute: "/",
+    routes: {
+      "/": (context) => EncryptingScreen(),
+      "/decryptingPage": (context) => decryptingPage(),
+    },
     debugShowCheckedModeBanner: false,
     title: "LockItt",
-    home: EncryptingScreen(),
-  ));
+    //home property causes an issue when we have the initial route
+    // the initial route is like the first page when the app starts up which is encrypting
+    //home: EncryptingScreen(),
+  )
+  );
 }
 
 class EncryptingScreen extends StatefulWidget {
@@ -24,8 +34,8 @@ class EncryptingScreen extends StatefulWidget {
 
 class _EncryptingScreenState extends State<EncryptingScreen> {
 
-
-  late io.File theImage = io.File("/images/wall_street.png");
+  late File theImage = File("/images/kirby.jpg");
+  late Uint8List decodedImageBytes;
 
   //use the text editing controller to store the user text input to store it in the images
   late TextEditingController HiddenMessageController;
@@ -62,27 +72,83 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
   }
 
   void encryptText(BuildContext context, String? password, String? hiddenMessage) async {
-    var crypt = AesCrypt(password);
+    AesCrypt crypt = AesCrypt();
+    crypt.setOverwriteMode(AesCryptOwMode.on);
+    crypt.setPassword(password);
+    final path = await _localPath;
     try {
-      final localPath = await _localPath;
-      print(crypt.hashCode);
+      File file = File('$path/encryption.txt.aes');
       print('Hidden msg: $password\n');
       print('Password msg: $hiddenMessage\n');
-      //encryptedFileDir = crypt.encryptTextToFileSync(hiddenMessage, '$localPath/test.txt.aes', utf16: false);
-      //print('Encrypted file: $encryptedFileDir\n');
+      encryptedFileDir = crypt.encryptTextToFileSync(hiddenMessage, file.path, utf16: false);
+      var decryptedString = crypt.decryptTextFromFileSync(file.path);
+      print('Contents:' + decryptedString);
+      print('Encrypted file: ' + file.path + '\n');
+
+
+      //For testing purposes
+      ByteData byteData = convertFileToByteData(file);
+      print("Converted file to byte data");
+      print(convertByteDataToString(byteData));
+      print("Converted bytedata to uint8list");
+
+      print("Image bytes: ");
+      print(decodeImageData());
+
     } catch(e) {
       print(e.toString());
     }
-
   }
 
+  ByteData convertFileToByteData(File fileToRead){
+    final file = fileToRead;
+    Uint8List bytes = file.readAsBytesSync();
+    return ByteData.view(bytes.buffer);
+  }
+
+  Uint8List convertByteDataToString(ByteData byteData){
+    ByteBuffer buffer = byteData.buffer;
+    var list = buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes);
+    return list;
+  }
+
+/*  Color getColorAtPixel(Image image){
+    image
+    return;
+  }*/
+
+
+  //Returns app directory
   Future<String> get _localPath async {
     final directory = await getApplicationDocumentsDirectory();
-    // For your reference print the AppDoc directory
-    print(directory.path + '/' + 'dir');
-    return directory.path + '/' + 'dir';
+    String path = directory.path;
+    return path;
   }
 
+  Future<List<List<List<int>>>> decodeImageData() async {
+    final Uint8List inputImg = (await rootBundle.load("images/dummy.jpeg")).buffer.asUint8List();
+    final Uint8List test;
+    final decoder = im.JpegDecoder();
+    final decodedImg = decoder.decodeImage(inputImg);
+    final decodedBytes = decodedImg.getBytes(format: im.Format.rgb);
+    decodedImageBytes = decodedBytes;
+    print(decodedImageBytes.runtimeType);
+
+    List<List<List<int>>> imgArr = [];
+    for(int y = 0; y < decodedImg.height; y++){
+      imgArr.add([]);
+      for(int x = 0; x < decodedImg.width; x++){
+        int r = decodedBytes[y * decodedImg.width * 3 + x * 3];
+        int g = decodedBytes[y * decodedImg.width * 3 + x * 3 + 1];
+        int b = decodedBytes[y * decodedImg.width * 3 + x * 3 + 2];
+        imgArr[y].add([r,g,b]);
+      }
+    }
+    print("rgb list");
+    print(imgArr);
+    print(imgArr.runtimeType);
+    return imgArr;
+  }
 
   /*void OpenCamera(BuildContext context) async{
     var photo = await ImagePicker.pickImage(source: ImageSource.camera);
@@ -96,7 +162,7 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
   Future<void> ShowOptionDialog(BuildContext context) {
     return showDialog(context: context, builder: (BuildContext context) {
       return AlertDialog(
-        title: Text("Select from either option: "),
+        title: Text("Select from Gallery: "),
         content: SingleChildScrollView(
           child: ListBody(
             children: <Widget>[
@@ -127,16 +193,15 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
     if(theImage == null) {
       return Text("Image not selected");
     }
-
-    return Image.file(theImage, width: 100, height: 100);
-
+    return Image.file(theImage, width: 200, height: 200);
   }
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       appBar: AppBar(
-        title: Text("Encrypt'n"),
+        title: Text("LockItBeta"),
       ),
       body: Container(
         child: Center(
@@ -149,6 +214,7 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
                   ShowOptionDialog(context);
                 },
                   child: Text("Upload Image"),
+
                 ),
 
                 //Add the user input for the encrypted message and password to be stored as bits
@@ -174,10 +240,15 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
                   ),
                 ),
                 FloatingActionButton(
+                    child: Text("Encrpyt"),
                     onPressed: () {
                       encryptText(context, Text(HiddenMessageController.text).data, Text(PrivateKeyController.text).data);
                     }
-                )
+                ),
+                RaisedButton(
+                  onPressed: () async => Navigator.push(context, new MaterialPageRoute(builder: (context) => new decryptingPage())),
+                  child: Text("Decrypting Page"),
+                ),
               ],
             ),
           ),
