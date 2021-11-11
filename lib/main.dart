@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import "decrypt.dart";
 
+
 void main() {
   runApp(new MaterialApp(
     initialRoute: "/",
@@ -112,11 +113,22 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
     return list;
   }
 
+  ByteData convertFileToByteData(File fileToRead){
+    final file = fileToRead;
+    Uint8List bytes = file.readAsBytesSync();
+    return ByteData.view(bytes.buffer);
+  }
+
+  Uint8List convertByteDataToString(ByteData byteData){
+      ByteBuffer buffer = byteData.buffer;
+      var list = buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes);
+      return list;
+  }
+
 /*  Color getColorAtPixel(Image image){
     image
     return;
   }*/
-
 
   //Returns app directory
   Future<String> get _localPath async {
@@ -132,7 +144,6 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
     final decodedImg = decoder.decodeImage(inputImg);
     final decodedBytes = decodedImg.getBytes(format: im.Format.rgb);
     decodedImageBytes = decodedBytes;
-    print(decodedImageBytes.runtimeType);
 
     List<List<List<int>>> imgArr = [];
     for(int y = 0; y < decodedImg.height; y++){
@@ -146,7 +157,6 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
     }
     print("rgb list");
     print(imgArr);
-    print(imgArr.runtimeType);
     return imgArr;
   }
 
@@ -210,7 +220,7 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: <Widget>[
                 UpdateImageView(),
-                RaisedButton(onPressed: () {
+              RaisedButton(onPressed: () {
                   ShowOptionDialog(context);
                 },
                   child: Text("Upload Image"),
@@ -257,3 +267,7 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
     );
   }
 }
+
+
+
+
