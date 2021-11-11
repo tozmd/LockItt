@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'dart:typed_data';
 import 'package:aes_crypt/aes_crypt.dart';
@@ -6,14 +7,23 @@ import 'package:flutter/services.dart';
 import 'package:image/image.dart' as im;
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import "decrypt.dart";
 
 
 void main() {
   runApp(new MaterialApp(
+    initialRoute: "/",
+    routes: {
+      "/": (context) => EncryptingScreen(),
+      "/decryptingPage": (context) => decryptingPage(),
+    },
     debugShowCheckedModeBanner: false,
     title: "LockItt",
-    home: EncryptingScreen(),
-  ));
+    //home property causes an issue when we have the initial route
+    // the initial route is like the first page when the app starts up which is encrypting
+    //home: EncryptingScreen(),
+  )
+  );
 }
 
 class EncryptingScreen extends StatefulWidget {
@@ -98,6 +108,18 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
   }
 
   Uint8List convertByteDataToString(ByteData byteData){
+    ByteBuffer buffer = byteData.buffer;
+    var list = buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes);
+    return list;
+  }
+
+  ByteData convertFileToByteData(File fileToRead){
+    final file = fileToRead;
+    Uint8List bytes = file.readAsBytesSync();
+    return ByteData.view(bytes.buffer);
+  }
+
+  Uint8List convertByteDataToString(ByteData byteData){
       ByteBuffer buffer = byteData.buffer;
       var list = buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes);
       return list;
@@ -107,7 +129,6 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
     image
     return;
   }*/
-
 
   //Returns app directory
   Future<String> get _localPath async {
@@ -139,10 +160,6 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
     return imgArr;
   }
 
-
-
-
-
   /*void OpenCamera(BuildContext context) async{
     var photo = await ImagePicker.pickImage(source: ImageSource.camera);
     this.setState(() {
@@ -155,7 +172,7 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
   Future<void> ShowOptionDialog(BuildContext context) {
     return showDialog(context: context, builder: (BuildContext context) {
       return AlertDialog(
-        title: Text("Select from either option: "),
+        title: Text("Select from Gallery: "),
         content: SingleChildScrollView(
           child: ListBody(
             children: <Widget>[
@@ -191,9 +208,10 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       appBar: AppBar(
-        title: Text("Encrypt'n"),
+        title: Text("LockItBeta"),
       ),
       body: Container(
         child: Center(
@@ -232,10 +250,15 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
                   ),
                 ),
                 FloatingActionButton(
+                    child: Text("Encrpyt"),
                     onPressed: () {
                       encryptText(context, Text(HiddenMessageController.text).data, Text(PrivateKeyController.text).data);
                     }
-                )
+                ),
+                RaisedButton(
+                  onPressed: () async => Navigator.push(context, new MaterialPageRoute(builder: (context) => new decryptingPage())),
+                  child: Text("Decrypting Page"),
+                ),
               ],
             ),
           ),
