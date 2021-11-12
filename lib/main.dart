@@ -7,6 +7,9 @@ import 'package:flutter/services.dart';
 import 'package:image/image.dart' as im;
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:permission_handler/permission_handler.dart';
+
 //import 'package:simple_permissions/simple_permissions.dart';
 
 
@@ -27,44 +30,46 @@ class EncryptingScreen extends StatefulWidget {
 }
 
 class _EncryptingScreenState extends State<EncryptingScreen> {
-
-  late File theImage = File("images/dummy.jpeg");
-  late Uint8List decodedImageBytes;
+  late File theImage = File('images/dummy.jpeg');
+  late Uint8List newImageBytes;
+  late Uint8List newImageData;
 
   //use the text editing controller to store the user text input to store it in the images
-  late TextEditingController HiddenMessageController;
-  late TextEditingController PrivateKeyController;
+  late TextEditingController hiddenMessageController;
+  late TextEditingController privateKeyController;
 
   late String encryptedFileDir = "";
-  late String HiddenMessage = "";
-  late String PrivateKey = "";
-  bool IsLoaded = false;
+  late String hiddenMessage = "";
+  late String privateKey = "";
+  bool isLoaded = false;
 
   void initState(){
 
-    HiddenMessageController = new TextEditingController();
-    PrivateKeyController = new TextEditingController();
-    print(HiddenMessageController.text);
+    hiddenMessageController = new TextEditingController();
+    privateKeyController = new TextEditingController();
+    print(hiddenMessageController.text);
 
     super.initState();
   }
 
-  //when every image is updated or no longer in use, delete the previous data off the text editing controller
+  ///when every image is updated or no longer in use, delete the previous data off the text editing controller
   void dispose() {
-    HiddenMessageController.dispose();
-    PrivateKeyController.dispose();
+    hiddenMessageController.dispose();
+    privateKeyController.dispose();
     super.dispose();
   }
 
-
+  ///Opens gallery where use can select image
   void OpenAlbum(BuildContext context) async {
-    var photo = await ImagePicker.pickImage(source: ImageSource.gallery);
+    ImagePicker imagePicker = ImagePicker();
+    var photo = await imagePicker.pickImage(source: ImageSource.gallery);
     setState(() {
-      theImage = photo;
+      theImage = File(photo!.path);
     });
     Navigator.of(context).pop();
   }
 
+  ///Encrypts text into image which is then installed into external storage
   void encryptText(BuildContext context, String? password, String? hiddenMessage) async {
     AesCrypt crypt = AesCrypt();
     crypt.setOverwriteMode(AesCryptOwMode.on);
@@ -80,33 +85,19 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
       print('Encrypted file: ' + file.path + '\n');
 
       //Steganography portion
-      final newImgAsByteList = putFileBytesIntoImgBytes(file);
-      //Save bytelist to local dir
-      saveBytesAsFile(newImgAsByteList);
+      putFileBytesIntoImgBytes(file);
+
       //Save to gallery
-      //saveImage();
+      saveImage();
+
     } catch(e) {
       print(e.toString());
     }
   }
 
 
-
-  ByteData convertFileToByteData(File fileToRead){
-    final file = fileToRead;
-    Uint8List bytes = file.readAsBytesSync();
-    return ByteData.view(bytes.buffer);
-  }
-
-  //The readable list
-  Uint8List convertByteDataToUint8List(ByteData byteData){
-      ByteBuffer buffer = byteData.buffer;
-      var list = buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes);
-      return list;
-  }
-
-  //Given the encrypted file and the image, put file bytes into LSB of image
-  Uint8List putFileBytesIntoImgBytes(File file){
+  ///Given the encrypted file and the image, put file bytes into LSB of image
+  void putFileBytesIntoImgBytes(File file){
     final bitsInByte = 8;
     final byteData = convertFileToByteData(file);
     final fileBytesList = convertByteDataToUint8List(byteData);
@@ -123,8 +114,6 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
     print(keywordBytes);*/
 
     int index = 0;
-
-    //Make dangerous assumption that there are more RGB bytes than bytes in file
 
     //Iterate over all bytes in file
     for(int i = 0; i <fileBytesList.length; i++){
@@ -148,19 +137,38 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
     print("new img:");
     print(newImgRGBBytes);
 
-    return newImgRGBBytes;
+    final im.Image? originalImage = im.decodeImage(theImage.readAsBytesSync());
+    im.Image editableImage = im.Image.fromBytes(originalImage!.width, originalImage!.height, newImgRGBBytes.toList());
+    Image displayableImage = Image.memory(im.encodePng(editableImage) as Uint8List, fit: BoxFit.fitWidth);
+    Uint8List data = Uint8List.fromList(im.encodePng(editableImage));
+
+    print("data after conversion to image");
+    print(data);
+
+    newImageBytes = newImgRGBBytes;
+    newImageData = data;
   }
 
-  void saveBytesAsFile(Uint8List byteList) async{
-    final path = await _localPath;
-    final file = File('$path/tempphoto.jpg').writeAsBytes(byteList);
-  }
-
+  ///Requests for permission to access external storage.
+  ///If there is access, save the new image to storage.
   void saveImage() async{
     final path = await _localPath;
+    if (await Permission.storage.request().isGranted) {
+      // You can request multiple permissions at once.
+      Map<Permission, PermissionStatus> statuses = await [
+        Permission.storage,
+        Permission.camera,
+      ].request();
+      print(statuses[Permission.storage]); // it should print PermissionStatus.granted
+
+      if(statuses[Permission.storage] == PermissionStatus.granted){
+        ImageGallerySaver.saveImage(newImageData);
+        print("Image saved");
+      }
+    }
   }
 
-  //Used to replace a byte's LSB with a new bit
+  ///Used to replace a byte's LSB with a new bit
   int replaceLSBWithBit(int originalByte, String bit){
     final byteString = convertIntToBits(originalByte);
     final newByteString = byteString.substring(0, byteString.length - 1) + bit;
@@ -168,7 +176,7 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
   }
 
 
-  //Return a bit string of size 8
+  ///Return a bit string of size 8
   String convertIntToBits(int n){
     var bits = n.toRadixString(2);
     while(bits.length != 8){
@@ -177,68 +185,43 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
     return bits;
   }
 
-  //Convert bit string to an int
+  ///Convert bit string to an int
   int convertBitsToInt(String bits){
     final _pattern = RegExp(r'(?:0x)?(\d+)');
     return int.parse(_pattern.firstMatch(bits)!.group(1)!, radix: 2);
   }
 
-/*  Color getColorAtPixel(Image image){
-    image
-    return;
-  }*/
 
-
-  //Returns app directory
+  ///Returns app local directory
   Future<String> get _localPath async {
     final directory = await getApplicationDocumentsDirectory();
     String path = directory.path;
     return path;
   }
 
+    ///Converts user selected image into Uint8List
     Uint8List decodeImageData() {
     final im.Image? image = im.decodeImage(theImage.readAsBytesSync());
-    final imgBytes = image!.getBytes(format: im.Format.rgb);
+    //final imgBytes = image!.getBytes(format: im.Format.rgb);
+    final imgBytes = Uint8List.fromList(image!.getBytes().toList());
     print("Img bytes:");
     print(imgBytes);
-
-    //Prints rgb values in [r,g,b] format
-    /*List<List<List<int>>> imgArr = [];
-    for(int y = 0; y < image.height; y++){
-      imgArr.add([]);
-      for(int x = 0; x < image.width; x++){
-        int r = imgBytes[y * image.width * 3 + x * 3];
-        int g = imgBytes[y * image.width * 3 + x * 3 + 1];
-        int b = imgBytes[y * image.width * 3 + x * 3 + 2];
-        imgArr[y].add([r,g,b]);
-      }
-    }*/
     return imgBytes;
   }
 
-  /*Future<Uint8List> addEncryptedMsgToImg() async{
-    final path = await _localPath;
-    File encryptedFile = File('$path/encryption.txt.aes');
-
-    final Uint8List imgBytes = decodeImageData();
-    final ByteData byteData = convertFileToByteData(encryptedFile);
-    print("byte data using new method");
-    print(byteData);
-    return imgBytes;
-  }*/
-
-
-
-
-
-  /*void OpenCamera(BuildContext context) async{
-    var photo = await ImagePicker.pickImage(source: ImageSource.camera);
-    this.setState(() {
-      theImage = photo;
-    });
-    Navigator.of(context).pop();
+  ///Converts the aes text file into bytedata
+  ByteData convertFileToByteData(File fileToRead){
+    final file = fileToRead;
+    Uint8List bytes = file.readAsBytesSync();
+    return ByteData.view(bytes.buffer);
   }
-*/
+
+  ///Converts the aes text file bytedata into Uint8list
+  Uint8List convertByteDataToUint8List(ByteData byteData){
+    ByteBuffer buffer = byteData.buffer;
+    var list = buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes);
+    return list;
+  }
 
   Future<void> ShowOptionDialog(BuildContext context) {
     return showDialog(context: context, builder: (BuildContext context) {
@@ -301,7 +284,7 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
 
                 SizedBox(height: 20),
                 TextFormField(
-                  controller: HiddenMessageController,
+                  controller: hiddenMessageController,
                   decoration: InputDecoration(
                     isDense: true,
                     border: OutlineInputBorder(),
@@ -311,7 +294,7 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
 
                 SizedBox(height: 20),
                 TextFormField(
-                  controller: PrivateKeyController,
+                  controller: privateKeyController,
                   obscureText: true,
                   decoration: InputDecoration(
                     isDense: true,
@@ -321,7 +304,7 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
                 ),
                 FloatingActionButton(
                     onPressed: () {
-                      encryptText(context,Text(PrivateKeyController.text).data, Text(HiddenMessageController.text).data);
+                      encryptText(context,Text(privateKeyController.text).data, Text(hiddenMessageController.text).data);
                     }
                 )
               ],
