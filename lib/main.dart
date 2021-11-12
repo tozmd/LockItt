@@ -44,7 +44,6 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
   bool isLoaded = false;
 
   void initState(){
-
     hiddenMessageController = new TextEditingController();
     privateKeyController = new TextEditingController();
     print(hiddenMessageController.text);
@@ -89,7 +88,6 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
 
       //Save to gallery
       saveImage();
-
     } catch(e) {
       print(e.toString());
     }
@@ -101,19 +99,28 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
     final bitsInByte = 8;
     final byteData = convertFileToByteData(file);
     final fileBytesList = convertByteDataToUint8List(byteData);
-    print("File bytes:");
-    print(fileBytesList);
     final imgRGBBytes = decodeImageData();
     var newImgRGBBytes = imgRGBBytes;
 
+    //Keyword that will be included at beginning of message so program knows if there is a msg
+    final startKeyword = "START";
+    List<int> startKeywordBytes = utf8.encode(startKeyword);
     //Keyword that will be included after message so program knows where to stop decrypting
-    final keyword = "STOP";
+    final endKeyword = "STOP";
     //Keyword in bytes
-    List<int> keywordBytes = utf8.encode(keyword);
-  /*  print("keyword bytes");
-    print(keywordBytes);*/
+    List<int> endKeywordBytes = utf8.encode(endKeyword);
 
+    //To track position of index
     int index = 0;
+
+    //Add keyword message to start so decryptor knows whether or not to decrypt file
+    for(int i = 0; i<startKeywordBytes.length; i++){
+      var keywordByte = convertIntToBits(startKeywordBytes[i]);
+      for(int j = 0; j < bitsInByte; j++){
+        newImgRGBBytes[index] = replaceLSBWithBit(imgRGBBytes[index], keywordByte[j]);
+        index++;
+      }
+    }
 
     //Iterate over all bytes in file
     for(int i = 0; i <fileBytesList.length; i++){
@@ -127,8 +134,8 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
     }
 
     //Add keyword message to end so decryptor knows when to stop
-    for(int i = 0; i<keywordBytes.length; i++){
-      var keywordByte = convertIntToBits(keywordBytes[i]);
+    for(int i = 0; i<endKeywordBytes.length; i++){
+      var keywordByte = convertIntToBits(endKeywordBytes[i]);
       for(int j = 0; j < bitsInByte; j++){
         newImgRGBBytes[index] = replaceLSBWithBit(imgRGBBytes[index], keywordByte[j]);
         index++;
@@ -147,6 +154,12 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
 
     newImageBytes = newImgRGBBytes;
     newImageData = data;
+  }
+
+  ///Decrypting steganography portion. The method extracts the file bits
+  ///from an image and stores it in a file.
+  void extractFileBytesFromImg(){
+
   }
 
   ///Requests for permission to access external storage.
