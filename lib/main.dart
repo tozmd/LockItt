@@ -88,6 +88,9 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
 
       //Save to gallery
       saveImage();
+
+      //testing decryption
+      extractFileBytesFromImg(theImage);
     } catch(e) {
       print(e.toString());
     }
@@ -95,20 +98,22 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
 
 
   ///Given the encrypted file and the image, put file bytes into LSB of image
-  void putFileBytesIntoImgBytes(File file){
+  void putFileBytesIntoImgBytes(File imageFile){
     final bitsInByte = 8;
-    final byteData = convertFileToByteData(file);
+    final byteData = convertFileToByteData(imageFile);
     final fileBytesList = convertByteDataToUint8List(byteData);
-    final imgRGBBytes = decodeImageData();
+    final imgRGBBytes = decodeImageData(theImage);
     var newImgRGBBytes = imgRGBBytes;
 
     //Keyword that will be included at beginning of message so program knows if there is a msg
     final startKeyword = "START";
     List<int> startKeywordBytes = utf8.encode(startKeyword);
+    print(startKeywordBytes);
     //Keyword that will be included after message so program knows where to stop decrypting
-    final endKeyword = "STOP";
+    final stopKeyword = "STOP";
     //Keyword in bytes
-    List<int> endKeywordBytes = utf8.encode(endKeyword);
+    List<int> endKeywordBytes = utf8.encode(stopKeyword);
+    print(endKeywordBytes);
 
     //To track position of index
     int index = 0;
@@ -124,7 +129,7 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
 
     //Iterate over all bytes in file
     for(int i = 0; i <fileBytesList.length; i++){
-      print("Length of byte list:" + fileBytesList.length.toString()); //Need to incorporate this number at beginning of file to let program to run for how long
+      //print("Length of byte list:" + fileBytesList.length.toString()); //Need to incorporate this number at beginning of file to let program to run for how long
       //Iterate over bits in byte, 8
       var fileByte = convertIntToBits(fileBytesList[i]);
       for(int j = 0; j < bitsInByte; j++){
@@ -141,26 +146,145 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
         index++;
       }
     }
-    print("new img:");
-    print(newImgRGBBytes);
+    //print("new img:");
+    //print(newImgRGBBytes);
 
     final im.Image? originalImage = im.decodeImage(theImage.readAsBytesSync());
     im.Image editableImage = im.Image.fromBytes(originalImage!.width, originalImage!.height, newImgRGBBytes.toList());
     Image displayableImage = Image.memory(im.encodePng(editableImage) as Uint8List, fit: BoxFit.fitWidth);
     Uint8List data = Uint8List.fromList(im.encodePng(editableImage));
 
-    print("data after conversion to image");
-    print(data);
+    //print("data after conversion to image");
+    //print(data);
 
+
+    //newImgBytes refers to IMG rgb values
     newImageBytes = newImgRGBBytes;
+    //newImageData refers to image bytes
     newImageData = data;
   }
 
   ///Decrypting steganography portion. The method extracts the file bits
   ///from an image and stores it in a file.
-  void extractFileBytesFromImg(){
+  void extractFileBytesFromImg(File imageFile){
+    //Keyword that will be included at beginning of message so program knows if there is a msg
+    final startKeyword = "START";
+    List<int> startKeywordBytes = utf8.encode(startKeyword);
+    //Keyword that will be included after message so program knows where to stop decrypting
+    final stopKeyword = "STOP";
+    //Keyword in bytes
+    List<int> stopKeywordBytes = utf8.encode(stopKeyword);
 
+    final bitsInByte = 8;
+    //final imgBytes = decodeImageData(imageFile);
+    final imgBytes = newImageBytes;
+
+    final imgRGBBytes = decodeImageData(theImage);
+
+    print("original bytes:");
+    print(imgRGBBytes);
+    //Below one is the one to use
+    print("newImgBytes:");
+    print(newImageBytes);
+    print("newImgData");
+    print(newImageData);
+
+    //To iterate through img bytes
+    var index = 0;
+
+    print("the lsb of 242 is" + getLSB(242).toString());
+
+    //Used to check if START keyword exists
+    bool startKeywordExists = doesStartKeywordExist(imgBytes, startKeywordBytes, index);
+
+    //List of bytes extracted from image
+    List<int> listOfFileBytes = List.filled(1, 0, growable: true);
+
+    print("Start keyword exists:" + startKeywordExists.toString());
+
+    print("stop keyword starting position:" + getStopKeywordPosition(imgBytes, stopKeywordBytes, index).toString());
+
+    //Used to read bytes after finding START keyword
+    /*if(startKeywordExists){
+      for(int i = 0; i<startKeywordBytes.length; i++){
+        for(int j = 0; j<bitsInByte; j++){
+          var keywordByte = convertIntToBits(startKeywordBytes[i]);
+          if(getLSB(imgBytes[index]) == keywordByte[j]){
+
+          }
+        }
+      }
+    }*/
   }
+
+  ///Given a Uint8list of image bytes, find if the START keyword exists
+  bool doesStartKeywordExist(Uint8List imgBytes, List<int> startKeywordBytes, var index){
+    var bitsInByte = 8;
+    bool startKeywordExists = true;
+    //Below nested loops to check if "START" keyword exists
+    for(int i = 0; i<startKeywordBytes.length; i++){
+      var keywordByte = convertIntToBits(startKeywordBytes[i]);
+      //print("keyword byte for " + startKeywordBytes[i].toString() + ":"  + keywordByte);
+      for(int j = 0; j<bitsInByte; j++){
+        //print("lsb of img byte:" + getLSB(imgBytes[index]).toString() + ", bit of keyword:" + keywordByte[j].toString());
+        if(getLSB(imgBytes[index]) != keywordByte[j]){
+          startKeywordExists = false;
+          break;
+        }//End of if statement
+        index++;
+      }//End of inner for loop
+    }//End of outer for loop
+    return startKeywordExists;
+  }
+
+  int getStopKeywordPosition(Uint8List imgBytes, List<int> stopKeywordBytes, var index){
+    var bitsInByte = 8;
+    //The position of the first byte of "STOP" keyword
+    var position = index;
+
+    //bool to signal when to stop while loop
+    bool foundStopKeyword = false;
+    //bool to signal when to break for loops
+    bool wrongPattern = true;
+
+    var iterations = 0;
+    //Below loops are used to find the position of the "STOP" keyword
+    while(!foundStopKeyword){
+      //Outer for loop used to iterate over all bytes of stop keyword
+      for(int i = position; i<stopKeywordBytes.length; i++) {
+        iterations++;
+        if(wrongPattern){
+          break;
+        }//End of if statement
+        var keywordByte = convertIntToBits(stopKeywordBytes[i]);
+
+        ///Try adding up 8 bits from image first, then comparing to STOP bytes
+
+        //Inner loop to iterate over all bits in keyword byte
+        for(int j = 0; j<bitsInByte; j++){
+          print("lsb of img byte:" + getLSB(imgBytes[position + j]).toString() + ", bit of keyword:" + keywordByte[j].toString());
+          if(getLSB(imgBytes[i]) != keywordByte[j]){
+              wrongPattern = true;
+              break;
+            }//End of if
+          else{
+            wrongPattern = false;
+            }
+          }//End of else
+        }//End of outer for loop
+      if(!wrongPattern){
+        print("broke statement bc of no wrong pattern");
+        break;
+      }//End of if
+      else if(wrongPattern){
+        print("wrong pattern, continuing");
+        wrongPattern = false;
+        position++;
+        }//End of if else
+      }//End of while loop
+    print("iterations:" + iterations.toString());
+    return position;
+  }//End of method
 
   ///Requests for permission to access external storage.
   ///If there is access, save the new image to storage.
@@ -188,6 +312,12 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
     return convertBitsToInt(newByteString);
   }
 
+  ///Return the LSB of a int representation of a byte
+  String getLSB(int byte){
+    final byteString = convertIntToBits(byte);
+    return byteString.substring(byteString.length - 1, byteString.length );
+  }
+
 
   ///Return a bit string of size 8
   String convertIntToBits(int n){
@@ -212,13 +342,14 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
     return path;
   }
 
-    ///Converts user selected image into Uint8List
-    Uint8List decodeImageData() {
-    final im.Image? image = im.decodeImage(theImage.readAsBytesSync());
+  ///Converts user selected image into Uint8List
+  ///param file refers to an image stored as a file
+    Uint8List decodeImageData(File file) {
+    final im.Image? image = im.decodeImage(file.readAsBytesSync());
     //final imgBytes = image!.getBytes(format: im.Format.rgb);
     final imgBytes = Uint8List.fromList(image!.getBytes().toList());
-    print("Img bytes:");
-    print(imgBytes);
+    //print("Img bytes:");
+    //print(imgBytes);
     return imgBytes;
   }
 
