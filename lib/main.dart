@@ -195,26 +195,24 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
     print("the lsb of 242 is" + getLSB(242).toString());
 
     //Used to check if START keyword exists
-    bool startKeywordExists = doesStartKeywordExist(imgBytes, startKeywordBytes, index);
+    final startKeywordExists = doesStartKeywordExist(imgBytes, startKeywordBytes, index);
+
+    //The start byte position of the "STOP" keyword
+    final stopKeywordPosition = getStopKeywordPosition(imgBytes, stopKeywordBytes, index);
+
 
     //List of bytes extracted from image
     List<int> listOfFileBytes = List.filled(1, 0, growable: true);
 
     print("Start keyword exists:" + startKeywordExists.toString());
 
-    print("stop keyword starting position:" + getStopKeywordPosition(imgBytes, stopKeywordBytes, index).toString());
+    print("stop keyword starting position:" + stopKeywordPosition.toString());
+
 
     //Used to read bytes after finding START keyword
-    /*if(startKeywordExists){
-      for(int i = 0; i<startKeywordBytes.length; i++){
-        for(int j = 0; j<bitsInByte; j++){
-          var keywordByte = convertIntToBits(startKeywordBytes[i]);
-          if(getLSB(imgBytes[index]) == keywordByte[j]){
-
-          }
-        }
-      }
-    }*/
+    if(startKeywordExists){
+      
+    }
   }
 
   ///Given a Uint8list of image bytes, find if the START keyword exists
@@ -237,6 +235,7 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
     return startKeywordExists;
   }
 
+  ///Method finds the first byte position of the "STOP" keyword
   int getStopKeywordPosition(Uint8List imgBytes, List<int> stopKeywordBytes, var index){
     var bitsInByte = 8;
     //The position of the first byte of "STOP" keyword
@@ -244,45 +243,34 @@ class _EncryptingScreenState extends State<EncryptingScreen> {
 
     //bool to signal when to stop while loop
     bool foundStopKeyword = false;
-    //bool to signal when to break for loops
-    bool wrongPattern = true;
 
     var iterations = 0;
+
+    //String to add all bits to
+    String imgByteString = "";
+    String stopKeywordByteString = "";
+
+    //For loop adds all STOP bits to a concatenated stirng
+    for(int i = position; i<stopKeywordBytes.length; i++){
+      stopKeywordByteString += convertIntToBits(stopKeywordBytes[i]);
+    }
+
     //Below loops are used to find the position of the "STOP" keyword
     while(!foundStopKeyword){
-      //Outer for loop used to iterate over all bytes of stop keyword
-      for(int i = position; i<stopKeywordBytes.length; i++) {
-        iterations++;
-        if(wrongPattern){
-          break;
-        }//End of if statement
-        var keywordByte = convertIntToBits(stopKeywordBytes[i]);
-
-        ///Try adding up 8 bits from image first, then comparing to STOP bytes
-
-        //Inner loop to iterate over all bits in keyword byte
-        for(int j = 0; j<bitsInByte; j++){
-          print("lsb of img byte:" + getLSB(imgBytes[position + j]).toString() + ", bit of keyword:" + keywordByte[j].toString());
-          if(getLSB(imgBytes[i]) != keywordByte[j]){
-              wrongPattern = true;
-              break;
-            }//End of if
-          else{
-            wrongPattern = false;
-            }
-          }//End of else
-        }//End of outer for loop
-      if(!wrongPattern){
-        print("broke statement bc of no wrong pattern");
-        break;
+      //For loop used to get LSBs of 32 bits in a row from imgBytes
+      for(int i = position; i<position + (stopKeywordBytes.length * bitsInByte); i++){
+        imgByteString += getLSB(imgBytes[i]);
+      }
+      //If stop keyword is found in img bytes, exit out of loop
+      if(stopKeywordByteString == imgByteString){
+        foundStopKeyword = true;
       }//End of if
-      else if(wrongPattern){
-        print("wrong pattern, continuing");
-        wrongPattern = false;
-        position++;
-        }//End of if else
-      }//End of while loop
-    print("iterations:" + iterations.toString());
+      else{
+        imgByteString = "";
+        position += bitsInByte;
+      }//End of else
+      //When nothing is found, move over one byte
+    }//End of while loop
     return position;
   }//End of method
 
