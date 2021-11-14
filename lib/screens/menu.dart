@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_test_1/screens/decrypt.dart';
-import 'package:flutter_test_1/screens/encrypt.dart';
+import 'package:flutter_test_1/screens/decrypt_screen.dart';
+import 'package:flutter_test_1/screens/encrypt_screen.dart';
 
 class MenuScreen extends StatefulWidget {
   const MenuScreen({Key ? key}) : super(key: key);
@@ -24,19 +24,23 @@ class MenuScreenState extends State<MenuScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       bottomNavigationBar: BottomNavigationBar(
-        unselectedIconTheme: IconThemeData(color: Colors.black38),
-        selectedIconTheme: IconThemeData(color: Colors.black38),
+        selectedIconTheme: IconThemeData(color: Colors.amberAccent, size: 30),
+        selectedItemColor: Colors.amberAccent,
+        selectedLabelStyle: TextStyle(fontWeight: FontWeight.bold),
+        unselectedIconTheme: IconThemeData(color: Colors.amberAccent),
+        unselectedItemColor: Colors.amberAccent,
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
-        backgroundColor: Colors.blue,
+        backgroundColor: Colors.black87,
         items: [
           BottomNavigationBarItem(icon: Icon(Icons.lock), label: 'Encrypt'),
           BottomNavigationBarItem(icon: Icon(Icons.vpn_key), label: 'Decrypt'),
         ],
       ),
 
-      body: Center(
-        child: screens.elementAt(_selectedIndex),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: screens,
       ),
     );
 

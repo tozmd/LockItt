@@ -9,7 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'decrypt.dart';
+import 'decrypt_screen.dart';
 //import 'package:simple_permissions/simple_permissions.dart';
 
 
@@ -313,6 +313,8 @@ class EncryptingScreenState extends State<EncryptingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.black87,
+        titleTextStyle: TextStyle(color: Colors.amberAccent, fontSize: 25),
         title: Text("LockItt Encryption"),
       ),
       body: Container(

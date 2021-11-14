@@ -263,7 +263,9 @@ class DecryptingScreenState extends State<DecryptingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.black87,
         title: Text("LockItt Decryption"),
+        titleTextStyle: TextStyle(color: Colors.amberAccent, fontSize: 25),
       ),
       body: Container(
         child: Center(
