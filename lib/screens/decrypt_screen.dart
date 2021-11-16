@@ -18,7 +18,7 @@ class DecryptingScreenState extends State<DecryptingScreen> {
 
   late TextEditingController privateKeyController;
   String decryptedMessage =  "";
-  late File theImage = File('images/dummy.jpeg');
+  var theImage;
   late Uint8List fileBytes;
 
   void initState() {
@@ -36,13 +36,25 @@ class DecryptingScreenState extends State<DecryptingScreen> {
     Navigator.of(context).pop();
   }
 
-  Widget UpdateImageView(){
+  Widget updateImageView(){
     print(theImage);
-
+    Widget widget;
     if(theImage == null) {
-      return Text("Image not selected");
+      widget = Container(
+          decoration: BoxDecoration(
+              color: Colors.black87),
+          width: 200,
+          height: 200,
+          child: Icon(
+            Icons.camera_alt,
+            color: Colors.amberAccent,
+          )
+      );
     }
-    return Image.file(theImage, width: 200, height: 200);
+    else{
+      widget = Image.file(theImage!, width: 200, height: 200);
+    }
+    return widget;
   }
 
   ///If image contains a file, extract the bytes and decrypt the file message
@@ -65,9 +77,11 @@ class DecryptingScreenState extends State<DecryptingScreen> {
       decryptedMessage = crypt.decryptTextFromFileSync(file.path);
       print('Contents:' + decryptedMessage);
       print('Encrypted file: ' + file.path + '\n');
+      showAlertDialog(context, "Decrypted Message", decryptedMessage);
     }
     catch(e){
       print("Incorrect password!");
+      showAlertDialog(context, "Incorrect password!", "Please try again.");
     }
   }
 
@@ -230,8 +244,25 @@ class DecryptingScreenState extends State<DecryptingScreen> {
     return path;
   }
 
+    ///Show an alert with the corresponding title and message
+    showAlertDialog(BuildContext context, String title, String message) {
+      // set up the AlertDialog
+      AlertDialog alert = AlertDialog(
+        title: Text(title),
+        content: Text(message),
+      );
 
-  Future<void> ShowOptionDialog(BuildContext context) {
+      // show the dialog
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return alert;
+        },
+      );
+    }
+
+
+  Future<void> showOptionDialog(BuildContext context) {
     return showDialog(context: context, builder: (BuildContext context) {
       return AlertDialog(
         title: Text("Select from gallery to decrypt: "),
@@ -273,11 +304,16 @@ class DecryptingScreenState extends State<DecryptingScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: <Widget>[
-                UpdateImageView(),
+                updateImageView(),
                 ElevatedButton(onPressed: () {
-                  ShowOptionDialog(context);
+                  showOptionDialog(context);
                 },
-                  child: Text("Upload Image"),
+                  child: Text("Upload Image",
+                    style: TextStyle(color: Colors.black87),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                      primary: Colors.amberAccent
+                  ),
 
                 ),
 
@@ -291,6 +327,7 @@ class DecryptingScreenState extends State<DecryptingScreen> {
                     border: OutlineInputBorder(),
                     hintText: "Enter the password.",
                   ),
+                  obscureText: true,
                 ),
 
                 SizedBox(height: 50, width: 50),
@@ -299,7 +336,10 @@ class DecryptingScreenState extends State<DecryptingScreen> {
                     onPressed:() {
                       decryptImg(context, Text(privateKeyController.text).data);
                     },
-                    label: const Text("Decrypt")
+                    label: const Text("Decrypt",
+                    style: TextStyle(color: Colors.black87),
+                    ),
+                  backgroundColor: Colors.amberAccent,
                 ),
               ],
             ),

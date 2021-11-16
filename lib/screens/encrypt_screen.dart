@@ -9,8 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'decrypt_screen.dart';
-//import 'package:simple_permissions/simple_permissions.dart';
+
 
 
 class EncryptingScreen extends StatefulWidget {
@@ -21,7 +20,7 @@ class EncryptingScreen extends StatefulWidget {
 }
 
 class EncryptingScreenState extends State<EncryptingScreen> {
-  late File theImage = File('images/dummy.jpeg'); ///Need to change it so theImage points to NEW image not 'images/dummy.jpeg"
+  var theImage;
   late Uint8List newImageBytes;
   late Uint8List newImageData;
 
@@ -73,25 +72,22 @@ class EncryptingScreenState extends State<EncryptingScreen> {
       print('Password msg: $password\n');
       encryptedFileDir = crypt.encryptTextToFileSync(hiddenMessage, file.path, utf16: false);
 
-      //For testing purposes
-      var decryptedString = crypt.decryptTextFromFileSync(file.path);
-      print('Contents:' + decryptedString);
-      print('Encrypted file: ' + file.path + '\n');
-
       //Steganography portion
       putFileBytesIntoImgBytes(file);
 
+      //Save encrypted image to local storage
       saveAsPng();
 
-      //Save to gallery
+      //Save to gallery (external storage)
       saveImage();
+
+      showAlertDialog(context, "Message successfully encrypted!", "Check local storage for the image.");
 
       await deleteFile(file);
 
-      print("File eexists?" + file.exists().toString());
-
     } catch(e) {
       print(e.toString());
+      showAlertDialog(context, "Encryption failed!", "Try again or use a new image.");
     }
   }
 
@@ -99,7 +95,7 @@ class EncryptingScreenState extends State<EncryptingScreen> {
   void saveAsPng() async{
     final path = await _localPath;
 
-    final im.Image? originalImage = im.decodeImage(theImage.readAsBytesSync());
+    final im.Image? originalImage = im.decodeImage(theImage!.readAsBytesSync());
     im.Image editableImage = im.Image.fromBytes(originalImage!.width, originalImage!.height, newImageBytes);
     Image displayableImage = Image.memory(im.encodePng(editableImage) as Uint8List, fit: BoxFit.fitWidth);
     Uint8List data = Uint8List.fromList(im.encodePng(editableImage));
@@ -111,14 +107,12 @@ class EncryptingScreenState extends State<EncryptingScreen> {
   }
 
   ///Given the encrypted file and the image, put file bytes into LSB of image
-  void putFileBytesIntoImgBytes(File file){
+  void putFileBytesIntoImgBytes(File file) async{
     final bitsInByte = 8;
     final byteData = convertFileToByteData(file);
     final fileBytesList = convertByteDataToUint8List(byteData);
-    final imgRGBBytes = decodeImageData(theImage);
+    final imgRGBBytes = decodeImageData(theImage!);
     var newImgRGBBytes = imgRGBBytes;
-
-    print("IMG BYTES BEFORE ADDING FILE BYTES:" + newImgRGBBytes.toString());
 
     //Keyword that will be included at beginning of message so program knows if there is a msg
     final startKeyword = "START";
@@ -129,6 +123,9 @@ class EncryptingScreenState extends State<EncryptingScreen> {
     //Keyword in bytes
     List<int> endKeywordBytes = utf8.encode(stopKeyword);
     print(endKeywordBytes);
+
+    print("num of file bytes:" + fileBytesList.length.toString());
+    print("num of img rgb bytes:" + imgRGBBytes.length.toString());
 
     //To track position of index
     int index = 0;
@@ -143,13 +140,13 @@ class EncryptingScreenState extends State<EncryptingScreen> {
         index++;
       }
     }
-
     //Iterate over all bytes in file
     for(int i = 0; i <fileBytesList.length; i++){
       //print("Length of byte list:" + fileBytesList.length.toString()); //Need to incorporate this number at beginning of file to let program to run for how long
       //Iterate over bits in byte, 8
       var fileByte = convertIntToBits(fileBytesList[i]);
       for(int j = 0; j < bitsInByte; j++){
+        print("encrypting byte number:" + index.toString());
         newImgRGBBytes[index] = replaceLSBWithBit(imgRGBBytes[index], fileByte[j]);
         index++;
       }
@@ -166,10 +163,11 @@ class EncryptingScreenState extends State<EncryptingScreen> {
     print("new img:");
     print(newImgRGBBytes);
 
-    final im.Image? originalImage = im.decodeImage(theImage.readAsBytesSync());
+    final im.Image? originalImage = im.decodeImage(theImage!.readAsBytesSync());
     im.Image editableImage = im.Image.fromBytes(originalImage!.width, originalImage!.height, newImgRGBBytes.toList());
-    Image displayableImage = Image.memory(im.encodePng(editableImage) as Uint8List, fit: BoxFit.fitWidth);
+    //Image displayableImage = Image.memory(im.encodePng(editableImage) as Uint8List, fit: BoxFit.fitWidth);
     Uint8List data = Uint8List.fromList(im.encodePng(editableImage));
+
 
 
     print("data after conversion to image");
@@ -272,7 +270,24 @@ class EncryptingScreenState extends State<EncryptingScreen> {
     }
   }
 
-  Future<void> ShowOptionDialog(BuildContext context) {
+  ///Show an alert with the corresponding title and message
+  showAlertDialog(BuildContext context, String title, String message) {
+    // set up the AlertDialog
+    AlertDialog alert = AlertDialog(
+      title: Text(title),
+      content: Text(message),
+    );
+
+    // show the dialog
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return alert;
+      },
+    );
+  }
+
+  Future<void> showOptionDialog(BuildContext context) {
     return showDialog(context: context, builder: (BuildContext context) {
       return AlertDialog(
         title: Text("Select from gallery to encrpyt: "),
@@ -300,13 +315,25 @@ class EncryptingScreenState extends State<EncryptingScreen> {
     });
   }
 
-  Widget UpdateImageView(){
+  Widget updateImageView(){
     print(theImage);
-
+    Widget widget;
     if(theImage == null) {
-      return Text("Image not selected");
+      widget = Container(
+          decoration: BoxDecoration(
+              color: Colors.black87),
+          width: 200,
+          height: 200,
+          child: Icon(
+            Icons.camera_alt,
+            color: Colors.amberAccent,
+          )
+      );
     }
-    return Image.file(theImage, width: 200, height: 200);
+    else{
+      widget = Image.file(theImage!, width: 200, height: 200);
+    }
+    return widget;
   }
 
   @override
@@ -323,11 +350,16 @@ class EncryptingScreenState extends State<EncryptingScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: <Widget>[
-                UpdateImageView(),
+                updateImageView(),
                 ElevatedButton(onPressed: () {
-                  ShowOptionDialog(context);
+                  showOptionDialog(context);
                 },
-                  child: Text("Upload Image"),
+                  child: Text("Upload Image",
+                  style: TextStyle(color: Colors.black87),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    primary: Colors.amberAccent
+                  ),
 
                 ),
 
@@ -357,7 +389,10 @@ class EncryptingScreenState extends State<EncryptingScreen> {
                     onPressed:() {
                       encryptText(context,Text(privateKeyController.text).data, Text(hiddenMessageController.text).data);
                   },
-                    label: const Text("Encrypt")
+                    label: const Text("Encrypt",
+                    style: TextStyle(color: Colors.black87),
+                    ),
+                  backgroundColor: Colors.amberAccent,
                 ),
               ],
             ),
