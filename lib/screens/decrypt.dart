@@ -65,9 +65,46 @@ class DecryptingScreenState extends State<DecryptingScreen> {
       decryptedMessage = crypt.decryptTextFromFileSync(file.path);
       print('Contents:' + decryptedMessage);
       print('Encrypted file: ' + file.path + '\n');
+      showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: (
+                new Text("Correct Password")
+            ),
+            actions: <Widget>[
+              Container(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "Secret Message: " + decryptedMessage,
+                  textAlign: TextAlign.left,
+                ),
+              ),
+
+            ],
+      ),
+      );
     }
     catch(e){
       print("Incorrect password!");
+
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: (
+              new Text("Incorrect Password")
+          ),
+          actions: <Widget>[
+            Container(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                  "Please try again",
+                  textAlign: TextAlign.left,
+              ),
+            ),
+
+          ],
+        ),
+      );
     }
   }
 
@@ -284,6 +321,7 @@ class DecryptingScreenState extends State<DecryptingScreen> {
                 SizedBox(height: 20),
                 TextFormField(
                   controller: privateKeyController,
+                  obscureText: true,
                   decoration: InputDecoration(
                     isDense: true,
                     border: OutlineInputBorder(),
