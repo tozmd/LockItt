@@ -51,7 +51,7 @@ class EncryptingScreenState extends State<EncryptingScreen> {
       //Steganography portion
       newImageBytes = await putFileBytesIntoImgBytes(file, theImage);
 
-      //Save encrypted image to local storage
+      //Save image with the encrypted message to local storage
       saveAsPng(theImage, newImageBytes);
 
       //Save to gallery (external storage)
